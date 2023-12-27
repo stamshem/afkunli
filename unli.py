@@ -35,9 +35,7 @@ with mss.mss() as sct:
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         sum_ = cv2.matchTemplate(gray_frame, sum_png, cv2.TM_CCOEFF_NORMED)
         sum_search = np.where( sum_ >= 0.8)
-        if len(sum_search[0]):
-            if f==1:
-                continue
+        if len(sum_search[0]) and f!=1:
             f=1
             awaken = cv2.matchTemplate(gray_frame, awaken_png, cv2.TM_CCOEFF_NORMED)
             awaken_search = np.where( awaken >= 0.6)
@@ -57,9 +55,7 @@ with mss.mss() as sct:
             pyautogui.click(window['left']+sum_search[1][-1],window['top']+sum_search[0][-1])
         flip = cv2.matchTemplate(gray_frame, flip_png, cv2.TM_CCOEFF_NORMED)
         flip_search = np.where( flip >= 0.8)
-        if len(flip_search[0]):
-            if f==2:
-                continue
+        if len(flip_search[0]) and f!=2:
             f=2
             pyautogui.click(window['left']+flip_search[1][-1],window['top']+flip_search[0][-1],2,0.8)
         time.sleep(0.1)
