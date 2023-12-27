@@ -1,4 +1,3 @@
-import threading 
 import time
 import cv2
 import ctypes
@@ -6,7 +5,6 @@ import mss
 import mss.windows
 import numpy as np
 from ctypes import wintypes
-from collections import deque
 import pyautogui
 import keyboard
 user32 = ctypes.windll.user32
@@ -27,7 +25,8 @@ awaken_png =  cv2.imread('ashem.png',cv2.IMREAD_GRAYSCALE)
 cele_png = cv2.imread('bert.png',cv2.IMREAD_GRAYSCALE)
 sum_png = cv2.imread('sum.png',cv2.IMREAD_GRAYSCALE)
 flip_png = cv2.imread('flip.png',cv2.IMREAD_GRAYSCALE)
-i=467
+i=0
+k,l=0,0
 t=time.time()
 f=False
 with mss.mss() as sct:
@@ -42,14 +41,16 @@ with mss.mss() as sct:
             f=1
             awaken = cv2.matchTemplate(gray_frame, awaken_png, cv2.TM_CCOEFF_NORMED)
             awaken_search = np.where( awaken >= 0.6)
+            awaken_found= len(awaken_search[0])
             cele = cv2.matchTemplate(gray_frame, cele_png, cv2.TM_CCOEFF_NORMED)
             cele_search = np.where( cele >= 0.6)
-            awaken_found= len(awaken_search[0])
             cele_found= len(cele_search[0])
             if cele_found:
                 print('cele',i)
+                k+=1
             if awaken_found:
                 print('awaken',i)
+                l+=1
             if awaken_found and cele_found:
                 break
             i+=1
@@ -64,3 +65,4 @@ with mss.mss() as sct:
         time.sleep(0.1)
 t=time.time()-t        
 print(i,t,i/t)
+print(k,l)
