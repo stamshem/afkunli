@@ -1,3 +1,4 @@
+from ppadb.client import Client
 import time
 import cv2
 import ctypes
@@ -7,9 +8,15 @@ import numpy as np
 from ctypes import wintypes
 import pyautogui
 import keyboard
+import tools
+import os
+from platform import system
+from subprocess import check_output, Popen, PIPE
+
+
 user32 = ctypes.windll.user32
 
-
+cwd = os.path.dirname(__file__)
 handle = user32.FindWindowW(None, 'Bluestacks App Player')
 window = {} 
 rect = wintypes.RECT()
@@ -29,6 +36,40 @@ i=0
 k,l=0,0
 t=time.time()
 f=False
+def configureADB():
+    global adb_device
+    global adb_devices
+    adbpath = os.path.join(cwd, 'adb.exe') # Locate adb.exe in working directory
+    if system() != 'Windows' or not os.path.exists(adbpath):
+        adbpath = which('adb') # If we're not on Windows or can't find adb.exe in the working directory we try and find it in the PATH
+    Popen([adbpath, "kill-server"], stdout=PIPE).communicate()[0] # Restart the ADB server
+    time.sleep(2)
+    adb_devices = Popen([adbpath, "devices"], stdout=PIPE).communicate()[0] # Run 'adb.exe devices' and pipe output to string
+    adb_device_str = str(adb_devices[26:40]) # trim the string to extract the first device
+    adb_device = adb_device_str[2:15] # trim again because it's a byte object and has extra characters
+    if adb_device_str[2:11] == 'localhost':
+        adb_device = adb_device_str[2:16] # Extra letter needed if we manually connect
+    if adb_device_str[2:10] != 'emulator' and adb_device_str[2:11] != 'localhost': # If the ADB device output doesn't use these two prefixes then:
+        Popen([adbpath, 'connect', '127.0.0.1:' + str(portScan())], stdout=PIPE).communicate()[0] # Here we run portScan()
+        adb_devices = Popen([adbpath, "devices"], stdout=PIPE).communicate()[0]  # Run 'adb.exe devices' and pipe output to string
+        adb_device_str = str(adb_devices[26:40])  # trim the string to extract the first device
+        if len(str(config.get('ADVANCED', 'port'))) > 4:
+            adb_device = '127.0.0.1:' + (str(config.get('ADVANCED', 'port')))
+        else:
+            adb_device = adb_device_str[2:16]
+def connect_device():
+    global device # Contains our located device
+    configureADB()
+    adb = Client(host='127.0.0.1', port=5037)
+    device = adb.device(adb_device) # connect to the device we extracted in configureADB()
+    # PPADB can throw errors occasionally for no good reason, here we try and catch them and retry for stability
+    if device == None:
+        print('No ADB device found, often due to ADB errors. Please try manually connecting your client.')
+    else:
+        print('Device: ' + adb_device + ' successfully connected!')
+        
+
+connect_device()         
 with mss.mss() as sct:
     while not keyboard.is_pressed('q'):
         frame = np.array(sct.grab(window))
@@ -52,13 +93,15 @@ with mss.mss() as sct:
             if awaken_found and cele_found:
                 break
             i+=1
-            pyautogui.click(window['left']+sum_search[1][-1],window['top']+sum_search[0][-1])
+            device.input_tap(600,1800)
         flip = cv2.matchTemplate(gray_frame, flip_png, cv2.TM_CCOEFF_NORMED)
         flip_search = np.where( flip >= 0.8)
         if len(flip_search[0]) and f!=2:
             f=2
-            pyautogui.click(window['left']+flip_search[1][-1],window['top']+flip_search[0][-1],2,0.8)
+            device.input_tap(950,1820)
+            time.sleep(0.8)
+            device.input_tap(950,1820)
         time.sleep(0.1)
 t=time.time()-t        
-print(i,t,i/t)
+print(i,t/60/60,i/t)
 print(k,l)
