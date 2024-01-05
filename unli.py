@@ -12,8 +12,7 @@ import tools
 import os
 from platform import system
 from subprocess import check_output, Popen, PIPE
-
-
+import io
 user32 = ctypes.windll.user32
 
 cwd = os.path.dirname(__file__)
@@ -27,15 +26,14 @@ window['left'] = rect[0]
 window['top'] = rect[1]
 window['width'] = rect[2] -rect[0]
 window['height'] = rect[3] -rect[1]
-ctypes.windll.user32.SetForegroundWindow(handle)
 awaken_png =  cv2.imread('ashem.png',cv2.IMREAD_GRAYSCALE)
 cele_png = cv2.imread('bert.png',cv2.IMREAD_GRAYSCALE)
 sum_png = cv2.imread('sum.png',cv2.IMREAD_GRAYSCALE)
 flip_png = cv2.imread('flip.png',cv2.IMREAD_GRAYSCALE)
 i=0
+f=False
 k,l=0,0
 t=time.time()
-f=False
 def configureADB():
     global adb_device
     global adb_devices
@@ -62,21 +60,29 @@ def connect_device():
     configureADB()
     adb = Client(host='127.0.0.1', port=5037)
     device = adb.device(adb_device) # connect to the device we extracted in configureADB()
-    # PPADB can throw errors occasionally for no good reason, here we try and catch them and retry for stability
-    if device == None:
-        print('No ADB device found, often due to ADB errors. Please try manually connecting your client.')
-    else:
-        print('Device: ' + adb_device + ' successfully connected!')
-        
 
-connect_device()         
+
+connect_device()
+def epic3(frame):
+    en=0
+    cards = {'1': (231, 146), '2': (426, 146), '3': (607, 146), '4': (147, 277), '5': (327, 277), '6': (475, 277), '7': (650, 277), '8': (238, 409), '9': (427, 409), '10': (574, 409)}
+    awaken=False
+    for card in cards:
+        if frame[cards[card]][1] < 100 and frame[cards[card]][0] >200: 
+            en+=1
+        if frame[cards[card]][2] >200:
+            if frame[cards[card]][0] < 100 or frame[cards[card]][1]>200:
+                awaken=True
+    cv2.imshow(str(time.time()),frame)
+    return True if en==3 and awaken else False
 with mss.mss() as sct:
     while not keyboard.is_pressed('q'):
-        frame = np.array(sct.grab(window))
+        ctypes.windll.user32.SetForegroundWindow(handle)
+        frame =np.array(sct.grab(window))
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         sum_ = cv2.matchTemplate(gray_frame, sum_png, cv2.TM_CCOEFF_NORMED)
         sum_search = np.where( sum_ >= 0.8)
-        if len(sum_search[0]) and f!=1:
+        if len(sum_search[0])and f!=1:
             f=1
             awaken = cv2.matchTemplate(gray_frame, awaken_png, cv2.TM_CCOEFF_NORMED)
             awaken_search = np.where( awaken >= 0.6)
@@ -90,13 +96,13 @@ with mss.mss() as sct:
             if awaken_found:
                 print('awaken',i)
                 l+=1
-            if awaken_found and cele_found:
+            if awaken_found and cele_found and epic3(frame):
                 break
             i+=1
             device.input_tap(600,1800)
         flip = cv2.matchTemplate(gray_frame, flip_png, cv2.TM_CCOEFF_NORMED)
         flip_search = np.where( flip >= 0.8)
-        if len(flip_search[0]) and f!=2:
+        if len(flip_search[0])and f!=2:
             f=2
             device.input_tap(950,1820)
             time.sleep(0.8)
