@@ -33,7 +33,6 @@ flip_png = cv2.imread('flip.png',cv2.IMREAD_GRAYSCALE)
 i=0
 f=False
 k,l=0,0
-t=time.time()
 def configureADB():
     global adb_device
     global adb_devices
@@ -65,23 +64,24 @@ def connect_device():
 connect_device()
 def epic3(frame):
     en=0
-    cards = {'1': (231, 146), '2': (426, 146), '3': (607, 146), '4': (147, 277), '5': (327, 277), '6': (475, 277), '7': (650, 277), '8': (238, 409), '9': (427, 409), '10': (574, 409)}
+    cards = {'1': (231, 139), '2': (426, 139), '3': (607, 139), '4': (147, 265), '5': (327, 265), '6': (475, 265), '7': (650, 265), '8': (238, 392), '9': (427, 392), '10': (574, 392)}
     awaken=False
     for card in cards:
         if frame[cards[card]][1] < 100 and frame[cards[card]][0] >200: 
             en+=1
         if frame[cards[card]][2] >200:
             if frame[cards[card]][0] < 100 or frame[cards[card]][1]>200:
-                awaken=True
+                pass
     cv2.imshow(str(time.time()),frame)
-    return True if en==3 and awaken else False
+    return True if en==3 else False
+t=time.time()
 with mss.mss() as sct:
     while not keyboard.is_pressed('q'):
         ctypes.windll.user32.SetForegroundWindow(handle)
         frame =np.array(sct.grab(window))
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         sum_ = cv2.matchTemplate(gray_frame, sum_png, cv2.TM_CCOEFF_NORMED)
-        sum_search = np.where( sum_ >= 0.8)
+        sum_search = np.where( sum_ >= 0.6)
         if len(sum_search[0])and f!=1:
             f=1
             awaken = cv2.matchTemplate(gray_frame, awaken_png, cv2.TM_CCOEFF_NORMED)
@@ -100,6 +100,7 @@ with mss.mss() as sct:
                 break
             i+=1
             device.input_tap(600,1800)
+            bug=time.time()
         flip = cv2.matchTemplate(gray_frame, flip_png, cv2.TM_CCOEFF_NORMED)
         flip_search = np.where( flip >= 0.8)
         if len(flip_search[0])and f!=2:
@@ -107,7 +108,11 @@ with mss.mss() as sct:
             device.input_tap(950,1820)
             time.sleep(0.8)
             device.input_tap(950,1820)
+            bug=time.time()
         time.sleep(0.1)
+        if time.time()-bug>2:
+            f=1 if 2==f else 2
+                
 t=time.time()-t        
 print(i,t/60/60,i/t)
 print(k,l)
